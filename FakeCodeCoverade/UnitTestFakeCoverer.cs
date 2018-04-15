@@ -12,9 +12,10 @@ namespace FakeCodeCoverade
   public  class UnitTestFakeCoverer
   {
     ConcurrentBag<Error> errorList = new ConcurrentBag<Error>();
+    Assembly assembly;
     public void RunCovererOnAssembly(string assemblyName)
     {
-      Assembly assembly = Assembly.Load(assemblyName);
+      assembly = Assembly.Load(assemblyName);
 
       foreach (var type in assembly.GetTypes())
       {
@@ -221,6 +222,12 @@ namespace FakeCodeCoverade
           {
             return type.Name;
           }
+          if (type.IsInterface)
+          {
+           var tmp= assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+            type = tmp.FirstOrDefault();
+          }
+
         }
         return type.IsValueType ? Activator.CreateInstance(type) : CreateInstaceOfType(null, type).FirstOrDefault();
       }

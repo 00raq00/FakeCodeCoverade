@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>FakeCodeCoverade</id>
-    <version>1.0.1</version>
+    <version>$version$</version>
     <authors>Mariusz Purwin</authors>
     <owners>Mariusz Purwin</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -10,6 +10,7 @@
 Does your corporation require a much higher level?
 This library should help you.
 It can cover up to 100% of the code with tests.</description>
+  <releaseNotes>1.1.0 -> initial implementation of interface injection</releaseNotes>
   </metadata>
   <files>
     <file src="bin\Release\FakeCodeCoverade.dll" target="lib\net40\FakeCodeCoverade.dll" />
