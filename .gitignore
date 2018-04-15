@@ -1,0 +1,8 @@
+bin
+obj
+packages
+/FakeCodeCoverade/*.nupkg
+.axoCover*
+/.vs/FakeCodeCoverade/v15/.suo
+/.vs/FakeCodeCoverade/v15/Server/sqlite3/db.lock
+/.vs/FakeCodeCoverade/v15/Server/sqlite3/storage.ide
