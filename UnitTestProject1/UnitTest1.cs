@@ -11,8 +11,11 @@ namespace UnitTestProject1
     public void TestMethod()
     {
       UnitTestFakeCoverer unit = new UnitTestFakeCoverer();
-      unit.RunCovererOnAssembly("ProjectToCover");
+      unit.RunCovererOnAssembly("multiImplementation");
       var errors = unit.GetErrors();
+
+      unit.RunCovererOnAssembly("ProjectToCover");
+      errors = unit.GetErrors();
     }
   }
 }

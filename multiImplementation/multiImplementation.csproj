@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B4A7047D-D8F4-40EC-81CD-F672FD2960A1}</ProjectGuid>
+    <ProjectGuid>{A3B03ECD-6B35-4095-9931-FA08E4423AF5}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UnitTestProject1</RootNamespace>
-    <AssemblyName>UnitTestProject1</AssemblyName>
+    <RootNamespace>multiImplementation</RootNamespace>
+    <AssemblyName>multiImplementation</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -48,27 +48,15 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="Class5.cs" />
+    <Compile Include="Class5_1.cs" />
+    <Compile Include="Class5_2.cs" />
+    <Compile Include="Class7.cs" />
+    <Compile Include="Interface1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FakeCodeCoverade\FakeCodeCoverade.csproj">
-      <Project>{23649f45-41f2-48e4-874f-474caecf8541}</Project>
-      <Name>FakeCodeCoverade</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\FakeProjectToCover\ProjectToCover.csproj">
-      <Project>{6cd61854-1b33-4a7d-a401-f3d10694d05a}</Project>
-      <Name>ProjectToCover</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\multiImplementation\multiImplementation.csproj">
-      <Project>{a3b03ecd-6b35-4095-9931-fa08e4423af5}</Project>
-      <Name>multiImplementation</Name>
-    </ProjectReference>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

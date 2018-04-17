@@ -19,7 +19,33 @@ namespace FakeCodeCoverade
 
       foreach (var type in assembly.GetTypes())
       {
-        foreach (var inst in CreateInstaceOfType(assembly, type).Union(CreateInstaceOfType(assembly, type,true)))
+        foreach (var inst in CreateInstaceOfType(assembly, type))
+        {
+          if (inst != null)
+          {
+            var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+            var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+            var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+            var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+
+            foreach (var met in methods)
+            {
+              RunMethods(type, inst, met);
+            }
+
+            foreach (var field in fields)
+            {
+              GetAndSetValue(inst, field);
+            }
+
+
+            foreach (var property in properties)
+            {
+              GetAndSetValue(inst, property);
+            }
+          }
+        }
+        foreach (var inst in (CreateInstaceOfType(assembly, type, true)))
         {
           if (inst != null)
           {
@@ -56,39 +82,84 @@ namespace FakeCodeCoverade
 
     private void RunMethods(Type type, object inst, MethodInfo met)
     {
-      object[] parameters = null;
-      List<object> parametersList = new List<object>();
-      foreach (var param in met.GetParameters())
       {
-        Type paramType = param.ParameterType;
-        parametersList.Add(GetDefault(paramType));
-      }
-      parameters = parametersList.ToArray();
+        object[] parameters = null;
+        List<object> parametersList = new List<object>();
+        foreach (var param in met.GetParameters())
+        {
+          Type paramType = param.ParameterType;
+          parametersList.Add(GetDefault(paramType));
+        }
+        parameters = parametersList.ToArray();
 
-      try
-      {
-        met.Invoke(inst, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+        try
+        {
+          met.Invoke(inst, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+        }
+        catch (Exception e)
+        {
+          errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DefaultValues", Parameters = parameters });
+        }
       }
-      catch (Exception e)
       {
-        errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DefaultValues", Parameters=parameters });
-      }
+        object[] parameters = null;
+        List<List<object>> parametersList = new List<List<object>>();
+        foreach (var param in met.GetParameters())
+        {
+          Type t = param.ParameterType;
+          parametersList.Add(GetDefaults(t, true).ToList());
+        }
 
-      parameters = null;
-      parametersList = new List<object>();
-      foreach (var param in met.GetParameters())
-      {
-        Type paramType = param.ParameterType;
-        parametersList.Add(GetDefault(paramType, true));
-      }
-      parameters = parametersList.ToArray();
-      try
-      {
-        met.Invoke(inst, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
-      }
-      catch (Exception e)
-      {
-        errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DNonEmptyValues", Parameters = parameters });
+        var tmpd = parametersList.Select(x => x.Count);
+        int combinations = 1;
+        foreach (var t in tmpd)
+        {
+          combinations *= t;
+        }
+
+        int couuntY = parametersList.Count;
+
+        List<List<object>> combinationList = new List<List<object>>();
+        for (int i = 0; i < combinations; i++)
+        {
+          List<object> list = new List<object>();
+          for (int j = 0; j < parametersList.Count; j++)
+          {
+            list.Add(null);
+          }
+          combinationList.Add(list);
+        }
+
+
+        int tmp = combinations;
+        for (int i = 0; i < parametersList.Count; i++)
+        {
+          tmp /= parametersList[i].Count;
+          int o = 0;
+          for (int j = 0; j < combinationList.Count;)
+          {
+            for (int k = 0; k < tmp; k++, j++)
+            {
+
+              combinationList[j][i] = parametersList[i][o];
+            }
+            o++;
+            o %= parametersList[i].Count;
+          }
+        }
+        foreach (var tpt in combinationList)
+        {
+          parameters = tpt.ToArray();
+
+          try
+          {
+            met.Invoke(inst, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+          }
+          catch (Exception e)
+          {
+            errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DNonEmptyValues", Parameters = parameters });
+          }
+        }
       }
     }
 
@@ -157,39 +228,98 @@ namespace FakeCodeCoverade
           else
           {
             object[] parameters = null;
-            List<object> parametersList = new List<object>();
+            List< List<object>> parametersList = new List<List<object>>();
             foreach (var param in constract.GetParameters())
             {
               Type t = param.ParameterType;
-              parametersList.Add(GetDefault(t, tryNonEmpty));
+              parametersList.Add(GetDefaults(t, tryNonEmpty).ToList());
             }
 
-            parameters = parametersList.ToArray();
-
-            object inst = null;
-
-            try
+            var tmpd= parametersList.Select(x => x.Count);
+            int combinations = 1;
+            foreach (var t in tmpd)
             {
-              inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+              combinations *= t;
             }
-            catch (Exception e)
+
+            int couuntY = parametersList.Count;
+
+            List<List<object>> combinationList = new List<List<object>>();
+            for (int i =0;i<combinations; i++)
             {
-              errorList.Add(new Error() { Exception = e, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-ConstructorInvoke" });
+              List<object> list = new List<object>();
+              for (int j = 0;j< parametersList.Count; j++)
+              {
+                list.Add(null);
+              }
+              combinationList.Add(list);
+            }
+
+
+            int tmp = combinations;
+            for (int i=0; i< parametersList.Count; i++)
+            {
+              tmp /= parametersList[i].Count;
+              int o = 0;
+              for (int j = 0; j < combinationList.Count; )
+              {
+                for (int k = 0; k < tmp; k++, j++)
+                {
+
+                  combinationList[j][i] = parametersList[i][o];
+                }
+                o++;
+                o %= parametersList[i].Count;
+              }
+            }
+
+            foreach (var tpt in combinationList)
+            {
+              parameters = tpt.ToArray();
+
+              object inst = null;
 
               try
               {
-                inst = assembly?.CreateInstance($"{type.FullName}", false, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, null, null, null);
+                inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
               }
-              catch (Exception e1)
+              catch (Exception e)
               {
-                errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-AssemblyCreateInstance" });
+                errorList.Add(new Error() { Exception = e, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-ConstructorInvoke" });
+
+                try
+                {
+                  inst = assembly?.CreateInstance($"{type.FullName}", false, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, null, null, null);
+                }
+                catch (Exception e1)
+                {
+                  errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-AssemblyCreateInstance" });
+                }
               }
+
+              yield return inst;
             }
 
-            yield return inst;
           }
         }
       }
+    }
+
+    public IEnumerable<object> GetDefaults(Type type, bool tryNonEmpty = false)
+    {
+        if (type.IsInterface)
+        {
+          var tmp = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+          foreach (var typ in tmp)
+          {
+            yield return GetDefault(typ, tryNonEmpty);
+          }
+        }
+        else
+        {
+          yield return GetDefault(type, tryNonEmpty);
+        }
+      
     }
 
     public  object GetDefault(Type type, bool tryNonEmpty=false)

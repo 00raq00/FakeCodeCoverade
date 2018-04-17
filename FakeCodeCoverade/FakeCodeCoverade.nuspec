@@ -10,7 +10,7 @@
 Does your corporation require a much higher level?
 This library should help you.
 It can cover up to 100% of the code with tests.</description>
-  <releaseNotes>1.1.0 -> initial implementation of interface injection</releaseNotes>
+  <releaseNotes>1.2.0 -> better implementation of interface injection, inject all found implementation, generate all combination of parameters (contructors or methods) eq. 3 parameter, each of them accepts 3 implementaions --> 27 combinations</releaseNotes>
   </metadata>
   <files>
     <file src="bin\Release\FakeCodeCoverade.dll" target="lib\net40\FakeCodeCoverade.dll" />
