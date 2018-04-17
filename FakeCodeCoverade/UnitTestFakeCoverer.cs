@@ -114,7 +114,9 @@ namespace FakeCodeCoverade
         foreach (var param in met.GetParameters())
         {
           Type t = param.ParameterType;
-          parametersList.Add(GetDefaults(t, true).ToList());
+          List<object> item = GetDefaults(t, true).ToList();
+          item.Add(null);
+          parametersList.Add(item);
         }
 
         var tmpd = parametersList.Select(x => x.Count);
@@ -239,7 +241,9 @@ namespace FakeCodeCoverade
             foreach (var param in constract.GetParameters())
             {
               Type t = param.ParameterType;
-              parametersList.Add(GetDefaults(t, tryNonEmpty).ToList());
+              List<object> item = GetDefaults(t, tryNonEmpty).ToList();
+              item.Add(null);
+              parametersList.Add(item);
             }
 
             var tmpd= parametersList.Select(x => x.Count);

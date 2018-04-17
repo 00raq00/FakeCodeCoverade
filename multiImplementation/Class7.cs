@@ -16,6 +16,12 @@ namespace FakeProjectToCover
 
     public Class7(Interface1 inter, Interface1 inter2)
     {
+      if (inter == null)
+        return;
+
+      if (inter2 == null)
+        return;
+
       if (inter is Class5)
       {
         Console.Write("");
@@ -32,8 +38,15 @@ namespace FakeProjectToCover
       }
 
     }
-    public void WriteConsole(Interface1 inter)
+    public void WriteConsole(Interface1 inter, Interface1 inter2)
     {
+      if (inter == null)
+        return;
+
+      if (inter2 == null)
+        return;
+
+   
       if (inter is Class5)
       {
         Console.Write("");
