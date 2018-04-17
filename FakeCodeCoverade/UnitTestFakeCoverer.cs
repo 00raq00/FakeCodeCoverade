@@ -11,6 +11,13 @@ namespace FakeCodeCoverade
 {
   public  class UnitTestFakeCoverer
   {
+    //todo: 
+    //recognize abstract classes
+    //multiple assembly support
+    //cache and predefined implementations
+    //async implementaion
+    //refactor if necessary
+
     ConcurrentBag<Error> errorList = new ConcurrentBag<Error>();
     Assembly assembly;
     public void RunCovererOnAssembly(string assemblyName)
