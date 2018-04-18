@@ -13,68 +13,92 @@ namespace FakeCodeCoverade
   {
     //todo: 
     //recognize abstract classes
-    //multiple assembly support
+    //multiple assembly support   !!DONE!!
     //cache and predefined implementations
     //async implementaion
     //refactor if necessary
 
     ConcurrentBag<Error> errorList = new ConcurrentBag<Error>();
-    Assembly assembly;
-    public void RunCovererOnAssembly(string assemblyName)
+    List<Assembly> assemblies=new List<Assembly>();
+
+    public UnitTestFakeCoverer(bool searchImpelentationInSourceAssembly=false)
     {
-      assembly = Assembly.Load(assemblyName);
+      SearchImpelentationInSourceAssembly = searchImpelentationInSourceAssembly;
+    }
 
-      foreach (var type in assembly.GetTypes())
+    public bool SearchImpelentationInSourceAssembly { get; private set; }
+
+    public void RunCovererOnAssembly(params string[] assemblyNames)
+    {
+      if (assemblyNames != null)
       {
-        foreach (var inst in CreateInstaceOfType(assembly, type))
+        foreach (var assemblyName in assemblyNames)
         {
-          if (inst != null)
+          try
           {
-            var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-            var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-            var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-            var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+            var assembly = Assembly.Load(assemblyName);
+            assemblies.Add(assembly);
+          }
+          catch (Exception e)
+          {
 
-            foreach (var met in methods)
-            {
-              RunMethods(type, inst, met);
-            }
-
-            foreach (var field in fields)
-            {
-              GetAndSetValue(inst, field);
-            }
-
-
-            foreach (var property in properties)
-            {
-              GetAndSetValue(inst, property);
-            }
           }
         }
-        foreach (var inst in (CreateInstaceOfType(assembly, type, true)))
+        foreach (var assembly in assemblies)
         {
-          if (inst != null)
+          foreach (var type in assembly.GetTypes())
           {
-            var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-            var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-            var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-            var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-
-            foreach (var met in methods)
+            foreach (var inst in CreateInstaceOfType(assembly, type))
             {
-              RunMethods(type, inst, met);
+              if (inst != null)
+              {
+                var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+                var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+                var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+                var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+
+                foreach (var met in methods)
+                {
+                  RunMethods(type, inst, met);
+                }
+
+                foreach (var field in fields)
+                {
+                  GetAndSetValue(inst, field);
+                }
+
+
+                foreach (var property in properties)
+                {
+                  GetAndSetValue(inst, property);
+                }
+              }
             }
-
-            foreach (var field in fields)
+            foreach (var inst in (CreateInstaceOfType(assembly, type, true)))
             {
-              GetAndSetValue(inst, field);
-            }
+              if (inst != null)
+              {
+                var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+                var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+                var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+                var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+
+                foreach (var met in methods)
+                {
+                  RunMethods(type, inst, met);
+                }
+
+                foreach (var field in fields)
+                {
+                  GetAndSetValue(inst, field);
+                }
 
 
-            foreach (var property in properties)
-            {
-              GetAndSetValue(inst, property);
+                foreach (var property in properties)
+                {
+                  GetAndSetValue(inst, property);
+                }
+              }
             }
           }
         }
@@ -318,19 +342,43 @@ namespace FakeCodeCoverade
 
     public IEnumerable<object> GetDefaults(Type type, bool tryNonEmpty = false)
     {
-        if (type.IsInterface)
+      if (type.IsInterface)
+      {
+        IEnumerable<Type> implementations = null;
+        foreach (var assembly in assemblies)
         {
-          var tmp = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
-          foreach (var typ in tmp)
+          IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+          if (implementations == null)
           {
-            yield return GetDefault(typ, tryNonEmpty);
+            implementations = nextAssemlbyImplementations;
           }
+          else
+          {
+            implementations = implementations.Union(nextAssemlbyImplementations);
+          }         
         }
-        else
+
+        if(SearchImpelentationInSourceAssembly)
+        try
         {
-          yield return GetDefault(type, tryNonEmpty);
+          var interfaceAssembly = Assembly.GetAssembly(type);
+          var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+          implementations = implementations.Union(interfaceImplementations);
         }
-      
+        catch (Exception e)
+        {
+
+        }
+
+        foreach (var typ in implementations)
+        {
+          yield return GetDefault(typ, tryNonEmpty);
+        }
+      }
+      else
+      {
+        yield return GetDefault(type, tryNonEmpty);
+      }
     }
 
     public  object GetDefault(Type type, bool tryNonEmpty=false)
@@ -365,7 +413,19 @@ namespace FakeCodeCoverade
           }
           if (type.IsInterface)
           {
-           var tmp= assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+            IEnumerable<Type> tmp = null;
+            foreach (var assembly in assemblies)
+            {
+              IEnumerable<Type> tmp2 = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+              if (tmp == null)
+              {
+                tmp = tmp2;
+              }
+              else
+              {
+                tmp = tmp.Union(tmp2);
+              }
+            }
             type = tmp.FirstOrDefault();
           }
 

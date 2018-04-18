@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ProjectToCover
+namespace ClassLibrary1
 {
- public interface Interface1
-  {
-    void set(int i, double d, float f, decimal dd);
-  }
+    public class Class1
+    {
+    }
 }

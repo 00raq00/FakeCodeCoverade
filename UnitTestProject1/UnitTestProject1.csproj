@@ -57,6 +57,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ClassLibrary1\ClassLibrary1.csproj">
+      <Project>{d5136cb0-c4e6-4b72-ba1b-56e73ae0448d}</Project>
+      <Name>ClassLibrary1</Name>
+    </ProjectReference>
     <ProjectReference Include="..\FakeCodeCoverade\FakeCodeCoverade.csproj">
       <Project>{23649f45-41f2-48e4-874f-474caecf8541}</Project>
       <Name>FakeCodeCoverade</Name>

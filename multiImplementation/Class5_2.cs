@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace FakeProjectToCover
 {
-  class Class5_2 : Interface1
+public  class Class5_2 : Interface1
   {
     int i;
     double d;
