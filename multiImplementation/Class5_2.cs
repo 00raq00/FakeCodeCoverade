@@ -1,11 +1,11 @@
-﻿using ProjectToCover;
+﻿using multiImplementation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FakeProjectToCover
+namespace multiImplementation
 {
 public  class Class5_2 : Interface1
   {

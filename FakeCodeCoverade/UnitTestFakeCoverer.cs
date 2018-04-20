@@ -20,13 +20,17 @@ namespace FakeCodeCoverade
 
     ConcurrentBag<Error> errorList = new ConcurrentBag<Error>();
     List<Assembly> assemblies=new List<Assembly>();
+    private int _MaxParalelism = 1;
 
-    public UnitTestFakeCoverer(bool searchImpelentationInSourceAssembly=false)
+    public UnitTestFakeCoverer(bool searchImpelentationInSourceAssembly = false, bool searchInSystemAssembly = false)
     {
       SearchImpelentationInSourceAssembly = searchImpelentationInSourceAssembly;
+      AllowSearchInMicrosoftAssembly = searchInSystemAssembly;
     }
 
     public bool SearchImpelentationInSourceAssembly { get; private set; }
+
+    private readonly bool AllowSearchInMicrosoftAssembly;
 
     public void RunCovererOnAssembly(params string[] assemblyNames)
     {
@@ -48,7 +52,9 @@ namespace FakeCodeCoverade
         {
           foreach (var type in assembly.GetTypes())
           {
-            foreach (var inst in CreateInstaceOfType(assembly, type))
+            var enumerable = CreateInstaceOfType(assembly, type, type).ToList();
+            ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = _MaxParalelism };
+            Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
               if (inst != null)
               {
@@ -73,8 +79,10 @@ namespace FakeCodeCoverade
                   GetAndSetValue(inst, property);
                 }
               }
-            }
-            foreach (var inst in (CreateInstaceOfType(assembly, type, true)))
+            });
+
+            enumerable = CreateInstaceOfType(assembly, type, type, true).ToList();
+            Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
               if (inst != null)
               {
@@ -99,7 +107,7 @@ namespace FakeCodeCoverade
                   GetAndSetValue(inst, property);
                 }
               }
-            }
+            });
           }
         }
       }
@@ -119,7 +127,7 @@ namespace FakeCodeCoverade
         foreach (var param in met.GetParameters())
         {
           Type paramType = param.ParameterType;
-          parametersList.Add(GetDefault(paramType));
+          parametersList.Add(GetDefault(paramType, paramType));
         }
         parameters = parametersList.ToArray();
 
@@ -138,7 +146,7 @@ namespace FakeCodeCoverade
         foreach (var param in met.GetParameters())
         {
           Type t = param.ParameterType;
-          List<object> item = GetDefaults(t, true).ToList();
+          List<object> item = GetDefaults(t, type,true).ToList();
           item.Add(null);
           parametersList.Add(item);
         }
@@ -190,7 +198,7 @@ namespace FakeCodeCoverade
           }
           catch (Exception e)
           {
-            errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DNonEmptyValues", Parameters = parameters });
+            errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DontEmptyValues", Parameters = parameters });
           }
         }
       }
@@ -200,14 +208,14 @@ namespace FakeCodeCoverade
     {
       object value = GetNonPublicIntPropertiesValue(obj, name.Name, obj.GetType());
 
-      value = value ?? GetDefault(name.PropertyType);
+      value = value ?? GetDefault(name.PropertyType, name.PropertyType);
 
       SetNonPublicIntPropertiesValue(obj, value, name.Name, obj.GetType());
 
       value = GetNonPublicIntPropertiesValue(obj, name.Name, obj.GetType());
       }
 
-    private  IEnumerable<object> CreateInstaceOfType(Assembly assembly, Type type, bool tryNonEmpty=false)
+    private  IEnumerable<object> CreateInstaceOfType(Assembly assembly, Type type, Type baseType, bool tryNonEmpty =false)
     {
       var constructors = type.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
       if (constructors != null)
@@ -234,12 +242,12 @@ namespace FakeCodeCoverade
               Type t = param.ParameterType;
               if (t.IsGenericParameter)
               {
-                parametersList.Add(GetDefault(t.BaseType, tryNonEmpty));
+                parametersList.Add(GetDefault(t.BaseType, baseType,tryNonEmpty));
               }
               else
               {
 
-                parametersList.Add(GetDefault(t, tryNonEmpty));
+                parametersList.Add(GetDefault(t, baseType, tryNonEmpty));
               }
             }
 
@@ -265,8 +273,9 @@ namespace FakeCodeCoverade
             foreach (var param in constract.GetParameters())
             {
               Type t = param.ParameterType;
-              List<object> item = GetDefaults(t, tryNonEmpty).ToList();
-              item.Add(null);
+              List<object> item = tryNonEmpty?GetDefaults(t,baseType, tryNonEmpty).ToList(): new List<object>() { GetDefault(t, baseType, tryNonEmpty) };
+              if(!item.Contains(null))
+                item.Add(null);
               parametersList.Add(item);
             }
 
@@ -340,11 +349,11 @@ namespace FakeCodeCoverade
       }
     }
 
-    public IEnumerable<object> GetDefaults(Type type, bool tryNonEmpty = false)
+    public IEnumerable<object> GetDefaults(Type type, Type baseType, bool tryNonEmpty = false)
     {
+      IEnumerable<Type> implementations = new List<Type>();
       if (type.IsInterface)
       {
-        IEnumerable<Type> implementations = null;
         foreach (var assembly in assemblies)
         {
           IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
@@ -355,33 +364,122 @@ namespace FakeCodeCoverade
           else
           {
             implementations = implementations.Union(nextAssemlbyImplementations);
-          }         
+          }
         }
 
-        if(SearchImpelentationInSourceAssembly)
-        try
+        for (int i = 0; i < implementations.Count(); i++)
         {
-          var interfaceAssembly = Assembly.GetAssembly(type);
-          var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
-          implementations = implementations.Union(interfaceImplementations);
-        }
-        catch (Exception e)
-        {
-
+          implementations = GetInheritClasses(implementations.ElementAt(i), implementations);
         }
 
-        foreach (var typ in implementations)
-        {
-          yield return GetDefault(typ, tryNonEmpty);
-        }
+        if (SearchImpelentationInSourceAssembly)
+          try
+          {
+            if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
+            {
+              var interfaceAssembly = Assembly.GetAssembly(type);
+              var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+              implementations = implementations.Union(interfaceImplementations);
+            }
+          }
+          catch (Exception e)
+          {
+
+          }
       }
       else
+      if (type.IsAbstract)
       {
-        yield return GetDefault(type, tryNonEmpty);
+
+        foreach (var assembly in assemblies)
+        {
+          IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+          if (implementations == null)
+          {
+            implementations = nextAssemlbyImplementations;
+          }
+          else
+          {
+            implementations = implementations.Union(nextAssemlbyImplementations);
+          }
+        }
+
+        for (int i = 0; i < implementations.Count(); i++)
+        {
+          implementations = GetInheritClasses(implementations.ElementAt(i), implementations);
+        }
+
+        if (SearchImpelentationInSourceAssembly)
+          try
+          {
+            if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
+            {
+              var interfaceAssembly = Assembly.GetAssembly(type);
+              var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+              implementations = implementations.Union(interfaceImplementations);
+            }
+          }
+          catch (Exception e)
+          {
+
+          }
       }
+      else
+
+      {
+        implementations = GetInheritClasses(type, implementations, baseType);
+
+        for (int i=0; i<implementations.Count(); i++)
+        {
+          implementations = GetInheritClasses(implementations.ElementAt(i), implementations, baseType);
+        }
+
+
+          if (SearchImpelentationInSourceAssembly)
+          try
+          {
+            if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
+            {
+              var interfaceAssembly = Assembly.GetAssembly(type);
+              var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+              implementations = implementations.Union(interfaceImplementations);
+            }
+          }
+          catch (Exception e)
+          {
+
+          }
+      }
+
+      foreach (var typ in implementations)
+        {
+          yield return GetDefault(typ, baseType, tryNonEmpty);
+        }
+     
+      if(!type.IsInterface && !type.IsAbstract )
+        yield return GetDefault(type, baseType, tryNonEmpty);
+      
     }
 
-    public  object GetDefault(Type type, bool tryNonEmpty=false)
+    private IEnumerable<Type> GetInheritClasses(Type type, IEnumerable<Type> implementations, Type baseType=null)
+    {
+      foreach (var assembly in assemblies)
+      {
+        IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+        if (implementations == null)
+        {
+          implementations = nextAssemlbyImplementations;
+        }
+        else
+        {
+          implementations = implementations.Union(nextAssemlbyImplementations);
+        }
+      }
+
+      return implementations;
+    }
+
+    public  object GetDefault(Type type, Type baseType, bool tryNonEmpty =false)
     {
       try
       {
@@ -430,7 +528,7 @@ namespace FakeCodeCoverade
           }
 
         }
-        return type.IsValueType ? Activator.CreateInstance(type) : CreateInstaceOfType(null, type).FirstOrDefault();
+        return type.IsValueType ? Activator.CreateInstance(type) : CreateInstaceOfType(null, type, baseType).FirstOrDefault();
       }
       catch(Exception e)
       {
@@ -503,7 +601,7 @@ namespace FakeCodeCoverade
     {
       object value = GetNonPublicIntFiledValue(obj, name.Name, obj.GetType());
 
-      value = value ?? GetDefault(name.FieldType);
+      value = value ?? GetDefault(name.FieldType, name.FieldType);
 
       SetNonPublicIntFiledValue(obj, value, name.Name, obj.GetType());
 
@@ -512,5 +610,9 @@ namespace FakeCodeCoverade
       return value;
     }
 
+    public void SetMaxParalelism(int MaxParalelism)
+    {
+      _MaxParalelism = MaxParalelism;
+    }
   }
 }

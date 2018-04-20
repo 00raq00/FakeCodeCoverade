@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ProjectToCover
+namespace multiImplementation
 {
  public interface Interface1
   {

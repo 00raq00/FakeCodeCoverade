@@ -5,16 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace multiImplementation
+namespace ClassLibrary1
 {
-  public class Class7
+  class Class2
   {
-    int i;
-    double d;
-    float f;
-    decimal dd;
 
-    public Class7(Interface1 inter, Interface1 inter2)
+    public Class2(AbsClass inter, AbsClass inter2)
     {
       if (inter == null)
         return;
@@ -22,23 +18,26 @@ namespace multiImplementation
       if (inter2 == null)
         return;
 
-      if (inter is Class5)
+      if (inter is Class1)
       {
         Console.Write("");
       }
 
-      if (inter is Class5_1)
+      if (inter is Class7)
       {
         Console.Write("");
       }
-
-      if (inter is Class5_2)
+      if (inter is Class3)
+      {
+        Console.Write("");
+      }
+      if (inter is Class4)
       {
         Console.Write("");
       }
 
     }
-    public void WriteConsole(Interface1 inter, Interface1 inter2)
+    public void WriteConsole(AbsClass inter, AbsClass inter2)
     {
       if (inter == null)
         return;
@@ -46,23 +45,24 @@ namespace multiImplementation
       if (inter2 == null)
         return;
 
-   
-      if (inter is Class5)
+      if (inter is Class3)
+      {
+        Console.Write("");
+      }
+      if (inter is Class4)
       {
         Console.Write("");
       }
 
-      if (inter is Class5_1)
+      if (inter is Class1)
       {
         Console.Write("");
       }
 
-      if (inter is Class5_2)
+      if (inter is Class7)
       {
         Console.Write("");
       }
-
     }
-
   }
 }

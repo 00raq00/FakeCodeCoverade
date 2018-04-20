@@ -4,12 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FakeProjectToCover
+namespace ClassLibrary1
 {
-  class Program
+  class Class4:Class3
   {
-    static void Main(string[] args)
-    {
-    }
   }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FakeProjectToCover
+namespace ProjectToCover
 {
   class Class3<T>:Class2 where T:Class1
   {
