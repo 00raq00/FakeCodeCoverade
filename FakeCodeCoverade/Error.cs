@@ -7,6 +7,6 @@ namespace FakeCodeCoverade
     public Exception Exception { get; internal set; }
     public Type Type { get; internal set; }
     public object[] Parameters { get; internal set; }
-    public string MethodName { get; internal set; }
+    public ErrorTypeEnum ErrorType { get; internal set; }
   }
 }

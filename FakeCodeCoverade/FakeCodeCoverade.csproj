@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Error.cs" />
+    <Compile Include="ErrorTypeEnum.cs" />
     <Compile Include="UnitTestFakeCoverer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -79,7 +79,7 @@ namespace ClassLibrary1
       
 
     }
-    public void WriteConsole(Interface1 inter, Interface1 inter2,Class5_1 cs,object obj)
+    public void WriteConsole(Interface1 inter, Interface1 inter2,Class5_1 cs,int obj)
     {
       if (inter == null)
         return;

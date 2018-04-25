@@ -45,70 +45,53 @@ namespace FakeCodeCoverade
           }
           catch (Exception e)
           {
-
+            errorList.Add(new Error() { Exception = e, Parameters = new object[] { assemblyName }, ErrorType = ErrorTypeEnum.LoadAssemblyByName });
           }
         }
         foreach (var assembly in assemblies)
         {
-          foreach (var type in assembly.GetTypes())
+          foreach (var type in assembly.GetTypes().Where(x => !x.IsAbstract&& !x.IsInterface) )
           {
             var enumerable = CreateInstaceOfType(assembly, type, type).ToList();
             ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = _MaxParalelism };
             Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
-              if (inst != null)
-              {
-                var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-                var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-                var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-                var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-
-                foreach (var met in methods)
-                {
-                  RunMethods(type, inst, met);
-                }
-
-                foreach (var field in fields)
-                {
-                  GetAndSetValue(inst, field);
-                }
-
-
-                foreach (var property in properties)
-                {
-                  GetAndSetValue(inst, property);
-                }
-              }
+              ProcessInstance(inst, type);
             });
 
             enumerable = CreateInstaceOfType(assembly, type, type, true).ToList();
             Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
-              if (inst != null)
-              {
-                var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-                var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-                var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-                var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-
-                foreach (var met in methods)
-                {
-                  RunMethods(type, inst, met);
-                }
-
-                foreach (var field in fields)
-                {
-                  GetAndSetValue(inst, field);
-                }
-
-
-                foreach (var property in properties)
-                {
-                  GetAndSetValue(inst, property);
-                }
-              }
+              ProcessInstance(inst, type);
             });
           }
+        }
+      }
+    }
+
+    private void ProcessInstance(object inst, Type type)
+    {
+      if (inst != null)
+      {
+        var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+        var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+        var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+        var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+
+        foreach (var met in methods)
+        {
+          RunMethods(type, inst, met);
+        }
+
+        foreach (var field in fields)
+        {
+          GetAndSetValue(inst, field);
+        }
+
+
+        foreach (var property in properties)
+        {
+          GetAndSetValue(inst, property);
         }
       }
     }
@@ -137,7 +120,7 @@ namespace FakeCodeCoverade
         }
         catch (Exception e)
         {
-          errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DefaultValues", Parameters = parameters });
+          errorList.Add(new Error() { Exception = e, Type = type, ErrorType= ErrorTypeEnum.InvokeMethod, Parameters = parameters });
         }
       }
       {
@@ -146,48 +129,11 @@ namespace FakeCodeCoverade
         foreach (var param in met.GetParameters())
         {
           Type t = param.ParameterType;
-          List<object> item = GetDefaults(t, type,true).ToList();
+          List<object> item = GetDefaults(t, type, true).ToList();
           item.Add(null);
           parametersList.Add(item);
         }
-
-        var tmpd = parametersList.Select(x => x.Count);
-        int combinations = 1;
-        foreach (var t in tmpd)
-        {
-          combinations *= t;
-        }
-
-        int couuntY = parametersList.Count;
-
-        List<List<object>> combinationList = new List<List<object>>();
-        for (int i = 0; i < combinations; i++)
-        {
-          List<object> list = new List<object>();
-          for (int j = 0; j < parametersList.Count; j++)
-          {
-            list.Add(null);
-          }
-          combinationList.Add(list);
-        }
-
-
-        int tmp = combinations;
-        for (int i = 0; i < parametersList.Count; i++)
-        {
-          tmp /= parametersList[i].Count;
-          int o = 0;
-          for (int j = 0; j < combinationList.Count;)
-          {
-            for (int k = 0; k < tmp; k++, j++)
-            {
-
-              combinationList[j][i] = parametersList[i][o];
-            }
-            o++;
-            o %= parametersList[i].Count;
-          }
-        }
+        List<List<object>> combinationList = CreateParameterCombinations(parametersList);
         foreach (var tpt in combinationList)
         {
           parameters = tpt.ToArray();
@@ -198,10 +144,53 @@ namespace FakeCodeCoverade
           }
           catch (Exception e)
           {
-            errorList.Add(new Error() { Exception = e, Type = type, MethodName = "RunMethods-DontEmptyValues", Parameters = parameters });
+            errorList.Add(new Error() { Exception = e, Type = type, ErrorType=ErrorTypeEnum.InvokeMethod, Parameters = parameters });
           }
         }
       }
+    }
+
+    private static List<List<object>> CreateParameterCombinations(List<List<object>> parametersList)
+    {
+      var tmpd = parametersList.Select(x => x.Count);
+      int combinations = 1;
+      foreach (var t in tmpd)
+      {
+        combinations *= t;
+      }
+
+      int couuntY = parametersList.Count;
+
+      List<List<object>> combinationList = new List<List<object>>();
+      for (int i = 0; i < combinations; i++)
+      {
+        List<object> list = new List<object>();
+        for (int j = 0; j < parametersList.Count; j++)
+        {
+          list.Add(null);
+        }
+        combinationList.Add(list);
+      }
+
+
+      int tmp = combinations;
+      for (int i = 0; i < parametersList.Count; i++)
+      {
+        tmp /= parametersList[i].Count;
+        int o = 0;
+        for (int j = 0; j < combinationList.Count;)
+        {
+          for (int k = 0; k < tmp; k++, j++)
+          {
+
+            combinationList[j][i] = parametersList[i][o];
+          }
+          o++;
+          o %= parametersList[i].Count;
+        }
+      }
+
+      return combinationList;
     }
 
     private  void GetAndSetValue(object obj, PropertyInfo name)
@@ -261,7 +250,7 @@ namespace FakeCodeCoverade
             }
             catch (Exception e1)
             {
-              errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-ActivatorCreateInstance" });
+              errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType=ErrorTypeEnum.CreateInstance });
             }
 
             yield return inst;
@@ -279,43 +268,9 @@ namespace FakeCodeCoverade
               parametersList.Add(item);
             }
 
-            var tmpd= parametersList.Select(x => x.Count);
-            int combinations = 1;
-            foreach (var t in tmpd)
-            {
-              combinations *= t;
-            }
-
-            int couuntY = parametersList.Count;
-
-            List<List<object>> combinationList = new List<List<object>>();
-            for (int i =0;i<combinations; i++)
-            {
-              List<object> list = new List<object>();
-              for (int j = 0;j< parametersList.Count; j++)
-              {
-                list.Add(null);
-              }
-              combinationList.Add(list);
-            }
-
-
-            int tmp = combinations;
-            for (int i=0; i< parametersList.Count; i++)
-            {
-              tmp /= parametersList[i].Count;
-              int o = 0;
-              for (int j = 0; j < combinationList.Count; )
-              {
-                for (int k = 0; k < tmp; k++, j++)
-                {
-
-                  combinationList[j][i] = parametersList[i][o];
-                }
-                o++;
-                o %= parametersList[i].Count;
-              }
-            }
+          
+            
+            List<List<object>> combinationList = CreateParameterCombinations(parametersList);
 
             foreach (var tpt in combinationList)
             {
@@ -329,15 +284,13 @@ namespace FakeCodeCoverade
               }
               catch (Exception e)
               {
-                errorList.Add(new Error() { Exception = e, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-ConstructorInvoke" });
-
                 try
                 {
-                  inst = assembly?.CreateInstance($"{type.FullName}", false, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, null, null, null);
+                  inst = assembly?.CreateInstance($"{type.FullName}", false, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
                 }
                 catch (Exception e1)
                 {
-                  errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, MethodName = "CreateInstaceOfType-AssemblyCreateInstance" });
+                  errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType=ErrorTypeEnum.CreateInstance });
                 }
               }
 
@@ -356,20 +309,14 @@ namespace FakeCodeCoverade
       {
         foreach (var assembly in assemblies)
         {
-          IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
-          if (implementations == null)
-          {
-            implementations = nextAssemlbyImplementations;
-          }
-          else
-          {
-            implementations = implementations.Union(nextAssemlbyImplementations);
-          }
+          IEnumerable<Type> nextAssemlbyImplementations = FindInterfaceImplementations(type, assembly);
+
+          implementations = implementations.Union(nextAssemlbyImplementations);
         }
 
         for (int i = 0; i < implementations.Count(); i++)
         {
-          implementations = GetInheritClasses(implementations.ElementAt(i), implementations);
+          implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
         }
 
         if (SearchImpelentationInSourceAssembly)
@@ -378,35 +325,24 @@ namespace FakeCodeCoverade
             if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
             {
               var interfaceAssembly = Assembly.GetAssembly(type);
-              var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+              IEnumerable<Type> interfaceImplementations = FindInterfaceImplementations(type, interfaceAssembly);
               implementations = implementations.Union(interfaceImplementations);
             }
           }
           catch (Exception e)
           {
-
+            errorList.Add(new Error() { Exception = e, Parameters = new object[] { type }, ErrorType = ErrorTypeEnum.SearchImplementationInSourceAssembly });
           }
       }
       else
-      if (type.IsAbstract)
+      if (type.IsClass)
       {
 
-        foreach (var assembly in assemblies)
-        {
-          IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
-          if (implementations == null)
-          {
-            implementations = nextAssemlbyImplementations;
-          }
-          else
-          {
-            implementations = implementations.Union(nextAssemlbyImplementations);
-          }
-        }
+        implementations = GetInheritingClassesFromAllAssemblies(type, implementations, baseType);
 
         for (int i = 0; i < implementations.Count(); i++)
         {
-          implementations = GetInheritClasses(implementations.ElementAt(i), implementations);
+          implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
         }
 
         if (SearchImpelentationInSourceAssembly)
@@ -414,40 +350,14 @@ namespace FakeCodeCoverade
           {
             if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
             {
-              var interfaceAssembly = Assembly.GetAssembly(type);
-              var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
-              implementations = implementations.Union(interfaceImplementations);
+              var baseAssembly = Assembly.GetAssembly(type);
+              var inhiritClasses = FindInheritingClasses(type, baseType, baseAssembly);
+              implementations = implementations.Union(inhiritClasses);
             }
           }
           catch (Exception e)
           {
-
-          }
-      }
-      else
-
-      {
-        implementations = GetInheritClasses(type, implementations, baseType);
-
-        for (int i=0; i<implementations.Count(); i++)
-        {
-          implementations = GetInheritClasses(implementations.ElementAt(i), implementations, baseType);
-        }
-
-
-          if (SearchImpelentationInSourceAssembly)
-          try
-          {
-            if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
-            {
-              var interfaceAssembly = Assembly.GetAssembly(type);
-              var interfaceImplementations = interfaceAssembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
-              implementations = implementations.Union(interfaceImplementations);
-            }
-          }
-          catch (Exception e)
-          {
-
+            errorList.Add(new Error() { Exception = e, Parameters = new object[] { type }, ErrorType = ErrorTypeEnum.SearchImplementationInSourceAssembly });
           }
       }
 
@@ -461,19 +371,23 @@ namespace FakeCodeCoverade
       
     }
 
-    private IEnumerable<Type> GetInheritClasses(Type type, IEnumerable<Type> implementations, Type baseType=null)
+    private static IEnumerable<Type> FindInheritingClasses(Type type, Type baseType, Assembly assembly)
+    {
+      return assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+    }
+
+    private static IEnumerable<Type> FindInterfaceImplementations(Type type, Assembly interfaceAssembly)
+    {
+      return interfaceAssembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.Equals(type)).Select(y => y).Any()).Select(y => y);
+    }
+
+    private IEnumerable<Type> GetInheritingClassesFromAllAssemblies(Type type, IEnumerable<Type> implementations, Type baseType=null)
     {
       foreach (var assembly in assemblies)
       {
-        IEnumerable<Type> nextAssemlbyImplementations = assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
-        if (implementations == null)
-        {
-          implementations = nextAssemlbyImplementations;
-        }
-        else
-        {
+        IEnumerable<Type> nextAssemlbyImplementations = FindInheritingClasses(type, baseType, assembly);
+
           implementations = implementations.Union(nextAssemlbyImplementations);
-        }
       }
 
       return implementations;
@@ -514,7 +428,7 @@ namespace FakeCodeCoverade
             IEnumerable<Type> tmp = null;
             foreach (var assembly in assemblies)
             {
-              IEnumerable<Type> tmp2 = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.FullName.Equals(type.FullName)).Select(y => y).Any()).Select(y => y);
+              IEnumerable<Type> tmp2 = assembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.Equals(type)).Select(y => y).Any()).Select(y => y);
               if (tmp == null)
               {
                 tmp = tmp2;
@@ -532,7 +446,7 @@ namespace FakeCodeCoverade
       }
       catch(Exception e)
       {
-        errorList.Add(new Error() { Exception = e, Type = type,  MethodName = "GetDefault" });
+        errorList.Add(new Error() { Exception = e, Parameters = new object[] { type }, ErrorType = ErrorTypeEnum.CreateDefaultValue });
       }
       return null;
     }
@@ -550,21 +464,24 @@ namespace FakeCodeCoverade
       }
       catch(Exception e)
       {
-        errorList.Add(new Error() { Exception = e, Type = type, MethodName = "SetNonPublicIntFiledValue" });
+        errorList.Add(new Error() { Exception = e, Parameters = new object[] { type,fieldName }, ErrorType = ErrorTypeEnum.SetFieldValue });
       }
     }
 
 
-    public  void SetNonPublicIntPropertiesValue(object obj, object val, string fieldName, Type type)
+    public void SetNonPublicIntPropertiesValue(object obj, object val, string propertyName, Type type)
     {
-      try { 
-      var field = type.GetProperty(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-
-      field.SetValue(obj, val, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance,null,null,null);
+      try
+      {
+        var field = type.GetProperty(propertyName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+        if (field.GetSetMethod() != null)
+        {
+          field.SetValue(obj, val, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, null, null);
+        }
       }
       catch (Exception e)
       {
-        errorList.Add(new Error() { Exception = e, Type = type, MethodName = "SetNonPublicIntPropertiesValue" });
+        errorList.Add(new Error() { Exception = e, Parameters = new object[] { type, propertyName }, ErrorType = ErrorTypeEnum.SetPropertyValue });
       }
     }
 
@@ -577,22 +494,23 @@ namespace FakeCodeCoverade
       }
       catch (Exception e)
       {
-        errorList.Add(new Error() { Exception = e, Type = type, MethodName = "GetNonPublicIntFiledValue" });
+        errorList.Add(new Error() { Exception = e, Parameters = new object[] { type, fieldName }, ErrorType = ErrorTypeEnum.GetFieldValue });
       }
       return null;
     }
 
 
-    public  object GetNonPublicIntPropertiesValue(object obj, string fieldName, Type type)
+    public object GetNonPublicIntPropertiesValue(object obj, string fieldName, Type type)
     {
-      try { 
-      var field = type.GetProperty(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+      try
+      {
+        var field = type.GetProperty(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
 
-      return field.GetValue(obj, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance,null,null,null);
+        return field.GetValue(obj, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, null, null);
       }
       catch (Exception e)
       {
-        errorList.Add(new Error() { Exception = e, Type = type, MethodName = "GetNonPublicIntPropertiesValue" });
+        errorList.Add(new Error() { Exception = e, Parameters = new object[] { type, fieldName }, ErrorType = ErrorTypeEnum.GetPropertyValue });
       }
       return null;
     }

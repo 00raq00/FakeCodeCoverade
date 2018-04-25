@@ -10,7 +10,7 @@
 Does your corporation require a much higher level?
 This library should help you.
 It can cover up to 100% of the code with tests.</description>
-  <releaseNotes>1.5.0 -> parallel invoking methods is supported  </releaseNotes>
+  <releaseNotes>1.6.0 -> small refactor and bug fixing, better search algorithm for inheriting classes</releaseNotes>
   </metadata>
   <files>
     <file src="bin\Release\FakeCodeCoverade.dll" target="lib\net40\FakeCodeCoverade.dll" />
