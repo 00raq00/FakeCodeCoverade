@@ -1,1 +1,1 @@
-nuget pack FakeCodeCoverade.csproj -properties Configuration=Release
+nuget pack AutoCodeCoverade.csproj -properties Configuration=Release

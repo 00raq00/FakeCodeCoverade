@@ -45,6 +45,9 @@
     <Compile Include="Class2.cs" />
     <Compile Include="Class3.cs" />
     <Compile Include="Class4.cs" />
+    <Compile Include="Class8.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Class7.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

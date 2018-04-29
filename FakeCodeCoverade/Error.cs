@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FakeCodeCoverade
+namespace AutoCodeCoverade
 {
   public class Error
   {

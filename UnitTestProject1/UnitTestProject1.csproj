@@ -61,9 +61,9 @@
       <Project>{d5136cb0-c4e6-4b72-ba1b-56e73ae0448d}</Project>
       <Name>ClassLibrary1</Name>
     </ProjectReference>
-    <ProjectReference Include="..\FakeCodeCoverade\FakeCodeCoverade.csproj">
+    <ProjectReference Include="..\FakeCodeCoverade\AutoCodeCoverade.csproj">
       <Project>{23649f45-41f2-48e4-874f-474caecf8541}</Project>
-      <Name>FakeCodeCoverade</Name>
+      <Name>AutoCodeCoverade</Name>
     </ProjectReference>
     <ProjectReference Include="..\FakeProjectToCover\ProjectToCover.csproj">
       <Project>{6cd61854-1b33-4a7d-a401-f3d10694d05a}</Project>

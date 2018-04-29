@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>FakeCodeCoverade</id>
+    <id>AutoCodeCoverade</id>
     <version>$version$</version>
     <authors>Mariusz Purwin</authors>
     <owners>Mariusz Purwin</owners>
@@ -10,10 +10,10 @@
 Does your corporation require a much higher level?
 This library should help you.
 It can cover up to 100% of the code with tests.</description>
-  <releaseNotes>1.6.0 -> small refactor and bug fixing, better search algorithm for inheriting classes</releaseNotes>
+  <releaseNotes>1.0.0 -> rename assembly, add injection of parameters, add more options, compatibility break</releaseNotes>
   </metadata>
   <files>
-    <file src="bin\Release\FakeCodeCoverade.dll" target="lib\net40\FakeCodeCoverade.dll" />
-    <file src="bin\Release\FakeCodeCoverade.pdb" target="lib\net40\FakeCodeCoverade.pdb" />
+    <file src="bin\Release\AutoCodeCoverade.dll" target="lib\net40\AutoCodeCoverade.dll" />
+    <file src="bin\Release\AutoCodeCoverade.pdb" target="lib\net40\AutoCodeCoverade.pdb" />
   </files>
 </package>

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
-using FakeCodeCoverade;
+using AutoCodeCoverade;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using multiImplementation;
 
 namespace UnitTestProject1
 {
@@ -11,22 +12,25 @@ namespace UnitTestProject1
     [TestMethod]
     public void TestMethod()
     {
-      UnitTestFakeCoverer unit = new UnitTestFakeCoverer(searchImpelentationInSourceAssembly: true, searchInSystemAssembly: false);
-      unit.SetMaxParalelism(2);
+      AutoCoverOptions autoCoverOptions = new AutoCoverOptions()
+      {
+        AllowSearchInMicrosoftAssembly = false,
+        CoverFields = false,
+        CoverProperties = true,
+        InvokeMethods = true,
+        MaxDegreeOfParallelismForCreateInstances = 2,
+        MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes = 4,
+        MaxDegreeOfParallelismForMethodsInvokes = 4,
+        SearchImpelentationInSourceAssembly = true,
+        TryCoverBaseExternal = false
+      };
+      AutoCodeCoverer unit = new AutoCodeCoverer(autoCoverOptions);
+      unit.SetInstanceToInject(typeof(Interface1), new Class5(9));
+      unit.SetInstanceToInject(typeof(object), new Class7(null,null));
       unit.RunCovererOnAssembly("ClassLibrary1", "multiImplementation", "ProjectToCover");
       var errors = unit.GetErrors();
 
       Assert.AreEqual(errors.Count(), 0);
-      /*
-      UnitTestFakeCoverer unitWithOption = new UnitTestFakeCoverer(searchImpelentationInSourceAssembly: true);
-      unitWithOption.RunCovererOnAssembly("ClassLibrary1", "multiImplementation");
-      var errorsWithOption = unitWithOption.GetErrors();
-
-
-      var unitWithOptionHighRisk = new UnitTestFakeCoverer(searchImpelentationInSourceAssembly: true,searchInSystemAssembly:true);
-      unitWithOptionHighRisk.RunCovererOnAssembly("ClassLibrary1", "multiImplementation");
-      var errorsWithOptionHighRisk = unitWithOptionHighRisk.GetErrors();
-      */
     }
   }
 }

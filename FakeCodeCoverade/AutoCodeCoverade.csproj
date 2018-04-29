@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{23649F45-41F2-48E4-874F-474CAECF8541}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>FakeCodeCoverade</RootNamespace>
-    <AssemblyName>FakeCodeCoverade</AssemblyName>
+    <RootNamespace>AutoCodeCoverade</RootNamespace>
+    <AssemblyName>AutoCodeCoverade</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -46,14 +46,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AutoCoverOptions.cs" />
     <Compile Include="Error.cs" />
     <Compile Include="ErrorTypeEnum.cs" />
-    <Compile Include="UnitTestFakeCoverer.cs" />
+    <Compile Include="AutoCodeCoverer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="FakeCodeCoverade.nuspec" />
+    <None Include="AutoCodeCoverade.nuspec" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

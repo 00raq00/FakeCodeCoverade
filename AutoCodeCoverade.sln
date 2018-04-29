@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27520.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FakeCodeCoverade", "FakeCodeCoverade\FakeCodeCoverade.csproj", "{23649F45-41F2-48E4-874F-474CAECF8541}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoCodeCoverade", "FakeCodeCoverade\AutoCodeCoverade.csproj", "{23649F45-41F2-48E4-874F-474CAECF8541}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectToCover", "FakeProjectToCover\ProjectToCover.csproj", "{6CD61854-1B33-4A7D-A401-F3D10694D05A}"
 EndProject

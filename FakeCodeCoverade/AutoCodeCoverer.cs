@@ -1,4 +1,5 @@
 ﻿
+using AutoCodeCoverade;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,31 +8,42 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FakeCodeCoverade
+namespace AutoCodeCoverade
 {
-  public  class UnitTestFakeCoverer
+  public  class AutoCodeCoverer
   {
-    //todo: 
-    //recognize abstract classes   !!DONE!!
-    //multiple assembly support   !!DONE!!
-    //cache and predefined implementations
-    //parallel implementaion    !!DONE!!
-    //refactor if necessary
-
     ConcurrentBag<Error> errorList = new ConcurrentBag<Error>();
-    List<Assembly> assemblies=new List<Assembly>();
-    private int _MaxParalelism = 1;
-
-    public UnitTestFakeCoverer(bool searchImpelentationInSourceAssembly = false, bool searchInSystemAssembly = false)
+    ConcurrentDictionary<Type,object> injectionDictionary = new ConcurrentDictionary<Type, object>();
+    
+    public void SetInstanceToInject(Type type, object instance)
     {
-      SearchImpelentationInSourceAssembly = searchImpelentationInSourceAssembly;
-      AllowSearchInMicrosoftAssembly = searchInSystemAssembly;
+      if(type.IsInstanceOfType(instance))
+      {
+        injectionDictionary[type] = instance;
+      }
     }
 
-    public bool SearchImpelentationInSourceAssembly { get; private set; }
+    List<Assembly> assemblies=new List<Assembly>();
 
-    private readonly bool AllowSearchInMicrosoftAssembly;
+    private AutoCoverOptions autoCoverOptions;
 
+    public AutoCodeCoverer():this(new AutoCoverOptions())
+    {
+      
+    }
+
+    public AutoCodeCoverer(AutoCoverOptions autoCoverOptions)
+    {
+      this.autoCoverOptions = autoCoverOptions;
+    }
+
+    public bool UseInstanceInjection
+  {
+    get
+    {
+      return injectionDictionary.Count > 0;
+    }
+  }
     public void RunCovererOnAssembly(params string[] assemblyNames)
     {
       if (assemblyNames != null)
@@ -52,8 +64,10 @@ namespace FakeCodeCoverade
         {
           foreach (var type in assembly.GetTypes().Where(x => !x.IsAbstract&& !x.IsInterface) )
           {
+            string full = type.FullName;
             var enumerable = CreateInstaceOfType(assembly, type, type).ToList();
-            ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = _MaxParalelism };
+            ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForCreateInstances };
+
             Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
               ProcessInstance(inst, type);
@@ -73,25 +87,50 @@ namespace FakeCodeCoverade
     {
       if (inst != null)
       {
-        var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-        var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
         var members = inst.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-        var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
-
-        foreach (var met in methods)
+        
+        if (autoCoverOptions.InvokeMethods)
         {
-          RunMethods(type, inst, met);
+          var methods = inst.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+          if (!autoCoverOptions.TryCoverBaseExternal)
+          {
+            methods = methods.Where(x => (assemblies.Exists(y => y.Equals(x.DeclaringType.Assembly)))).ToArray();
+          }
+          ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes };
+
+          Parallel.ForEach(methods, parallelOptions, met =>
+          {
+            RunMethods(type, inst, met);
+          });
         }
 
-        foreach (var field in fields)
+        if (autoCoverOptions.CoverFields)
         {
-          GetAndSetValue(inst, field);
+          var fields = inst.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+
+          if(!autoCoverOptions.TryCoverBaseExternal)
+          {
+            fields = fields.Where(x => (assemblies.Exists(y=>y.Equals(x.DeclaringType.Assembly)))).ToArray();
+          }
+
+          foreach (var field in fields)
+          {
+            GetAndSetValue(inst, field);
+          }
         }
 
-
-        foreach (var property in properties)
+        if (autoCoverOptions.CoverProperties)
         {
-          GetAndSetValue(inst, property);
+          var properties = inst.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
+
+          if (!autoCoverOptions.TryCoverBaseExternal)
+          {
+            properties = properties.Where(x => (assemblies.Exists(y => y.Equals(x.DeclaringType.Assembly)))).ToArray();
+          }
+          foreach (var property in properties)
+          {
+            GetAndSetValue(inst, property);
+          }
         }
       }
     }
@@ -120,7 +159,7 @@ namespace FakeCodeCoverade
         }
         catch (Exception e)
         {
-          errorList.Add(new Error() { Exception = e, Type = type, ErrorType= ErrorTypeEnum.InvokeMethod, Parameters = parameters });
+          errorList.Add(new Error() { Exception = e, Type = type, ErrorType = ErrorTypeEnum.InvokeMethod, Parameters = parameters });
         }
       }
       {
@@ -130,11 +169,16 @@ namespace FakeCodeCoverade
         {
           Type t = param.ParameterType;
           List<object> item = GetDefaults(t, type, true).ToList();
-          item.Add(null);
+          if (!injectionDictionary.ContainsKey(t))
+            item.Add(null);
           parametersList.Add(item);
         }
         List<List<object>> combinationList = CreateParameterCombinations(parametersList);
-        foreach (var tpt in combinationList)
+
+
+        ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes };
+
+        Parallel.ForEach(combinationList, parallelOptions, tpt =>
         {
           parameters = tpt.ToArray();
 
@@ -144,9 +188,9 @@ namespace FakeCodeCoverade
           }
           catch (Exception e)
           {
-            errorList.Add(new Error() { Exception = e, Type = type, ErrorType=ErrorTypeEnum.InvokeMethod, Parameters = parameters });
+            errorList.Add(new Error() { Exception = e, Type = type, ErrorType = ErrorTypeEnum.InvokeMethod, Parameters = parameters });
           }
-        }
+        });
       }
     }
 
@@ -206,6 +250,14 @@ namespace FakeCodeCoverade
 
     private  IEnumerable<object> CreateInstaceOfType(Assembly assembly, Type type, Type baseType, bool tryNonEmpty =false)
     {
+      if(UseInstanceInjection)
+      {
+        if(injectionDictionary.Keys.Contains(type))
+        {
+          yield return injectionDictionary[type];
+          yield break;
+        }
+      }
       var constructors = type.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
       if (constructors != null)
       {
@@ -263,7 +315,7 @@ namespace FakeCodeCoverade
             {
               Type t = param.ParameterType;
               List<object> item = tryNonEmpty?GetDefaults(t,baseType, tryNonEmpty).ToList(): new List<object>() { GetDefault(t, baseType, tryNonEmpty) };
-              if(!item.Contains(null))
+              if(!item.Contains(null) && !injectionDictionary.ContainsKey(t))
                 item.Add(null);
               parametersList.Add(item);
             }
@@ -304,6 +356,14 @@ namespace FakeCodeCoverade
 
     public IEnumerable<object> GetDefaults(Type type, Type baseType, bool tryNonEmpty = false)
     {
+      if (UseInstanceInjection)
+      {
+        if (injectionDictionary.Keys.Contains(type))
+        {
+          yield return injectionDictionary[type];
+          yield break;
+        }
+      }
       IEnumerable<Type> implementations = new List<Type>();
       if (type.IsInterface)
       {
@@ -319,10 +379,10 @@ namespace FakeCodeCoverade
           implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
         }
 
-        if (SearchImpelentationInSourceAssembly)
+        if (autoCoverOptions.SearchImpelentationInSourceAssembly)
           try
           {
-            if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
+            if (!type.Namespace.StartsWith("System") || autoCoverOptions.AllowSearchInMicrosoftAssembly)
             {
               var interfaceAssembly = Assembly.GetAssembly(type);
               IEnumerable<Type> interfaceImplementations = FindInterfaceImplementations(type, interfaceAssembly);
@@ -345,10 +405,10 @@ namespace FakeCodeCoverade
           implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
         }
 
-        if (SearchImpelentationInSourceAssembly)
+        if (autoCoverOptions.SearchImpelentationInSourceAssembly)
           try
           {
-            if (!type.Namespace.StartsWith("System") || AllowSearchInMicrosoftAssembly)
+            if (!type.Namespace.StartsWith("System") || autoCoverOptions.AllowSearchInMicrosoftAssembly)
             {
               var baseAssembly = Assembly.GetAssembly(type);
               var inhiritClasses = FindInheritingClasses(type, baseType, baseAssembly);
@@ -395,6 +455,14 @@ namespace FakeCodeCoverade
 
     public  object GetDefault(Type type, Type baseType, bool tryNonEmpty =false)
     {
+      if (UseInstanceInjection)
+      {
+        if (injectionDictionary.Keys.Contains(type))
+        {
+           return injectionDictionary[type];
+          
+        }
+      }
       try
       {
         if (tryNonEmpty)
@@ -527,10 +595,6 @@ namespace FakeCodeCoverade
 
       return value;
     }
-
-    public void SetMaxParalelism(int MaxParalelism)
-    {
-      _MaxParalelism = MaxParalelism;
-    }
+     
   }
 }

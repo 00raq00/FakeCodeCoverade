@@ -1,4 +1,4 @@
-﻿namespace FakeCodeCoverade
+﻿namespace AutoCodeCoverade
 {
   public enum ErrorTypeEnum
     {
