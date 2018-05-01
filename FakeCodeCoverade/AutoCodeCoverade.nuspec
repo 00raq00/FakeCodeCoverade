@@ -6,11 +6,12 @@
     <authors>Mariusz Purwin</authors>
     <owners>Mariusz Purwin</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <iconUrl>https://raw.githubusercontent.com/00raq00/FakeCodeCoverade/master/FakeCodeCoverade/icon_I0S_icon.ico?</iconUrl>
     <description>Do you have too low coverage with unit tests?
 Does your corporation require a much higher level?
 This library should help you.
 It can cover up to 100% of the code with tests.</description>
-  <releaseNotes>1.0.0 -> rename assembly, add injection of parameters, add more options, compatibility break</releaseNotes>
+  <releaseNotes>1.1.0 -> allow set top combinations of parameters for methods invoking and creating instances, allow omit null parameter, allow randomize top combinations</releaseNotes>
   </metadata>
   <files>
     <file src="bin\Release\AutoCodeCoverade.dll" target="lib\net40\AutoCodeCoverade.dll" />

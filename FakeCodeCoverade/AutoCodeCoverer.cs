@@ -96,7 +96,7 @@ namespace AutoCodeCoverade
           {
             methods = methods.Where(x => (assemblies.Exists(y => y.Equals(x.DeclaringType.Assembly)))).ToArray();
           }
-          ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes };
+          ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForMethodsInvokes };
 
           Parallel.ForEach(methods, parallelOptions, met =>
           {
@@ -144,6 +144,7 @@ namespace AutoCodeCoverade
     private void RunMethods(Type type, object inst, MethodInfo met)
     {
       {
+        bool skipDefualtInvoke = false;
         object[] parameters = null;
         List<object> parametersList = new List<object>();
         foreach (var param in met.GetParameters())
@@ -153,13 +154,22 @@ namespace AutoCodeCoverade
         }
         parameters = parametersList.ToArray();
 
-        try
+        if (!autoCoverOptions.AllowNullsAsMethodParameter)
         {
-          met.Invoke(inst, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+          if (parameters.Where(x => x == null).Any())
+            skipDefualtInvoke = true;
         }
-        catch (Exception e)
+
+        if (!skipDefualtInvoke)
         {
-          errorList.Add(new Error() { Exception = e, Type = type, ErrorType = ErrorTypeEnum.InvokeMethod, Parameters = parameters });
+          try
+          {
+            met.Invoke(inst, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+          }
+          catch (Exception e)
+          {
+            errorList.Add(new Error() { Exception = e, Type = type, ErrorType = ErrorTypeEnum.InvokeMethod, Parameters = parameters });
+          }
         }
       }
       {
@@ -169,11 +179,26 @@ namespace AutoCodeCoverade
         {
           Type t = param.ParameterType;
           List<object> item = GetDefaults(t, type, true).ToList();
-          if (!injectionDictionary.ContainsKey(t))
+          if (!item.Contains(null)&&!injectionDictionary.ContainsKey(t))
             item.Add(null);
           parametersList.Add(item);
         }
-        List<List<object>> combinationList = CreateParameterCombinations(parametersList);
+
+        if (!autoCoverOptions.AllowNullsAsMethodParameter)
+        {
+          foreach (var par in parametersList)
+          {
+            for (int i = par.Count - 1; i >= 0; i--)
+            {
+              if (par[i] == null)
+              {
+                par.RemoveAt(i);
+              }
+            }
+          }
+        }
+
+        List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForInvokeMethods);
 
 
         ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes };
@@ -194,8 +219,14 @@ namespace AutoCodeCoverade
       }
     }
 
-    private static List<List<object>> CreateParameterCombinations(List<List<object>> parametersList)
+    private  List<List<object>> CreateParameterCombinations(List<List<object>> parametersList, int topParameterCombinations)
     {
+      for(int i =parametersList.Count-1; i>=0;i--)
+      {
+        parametersList[i] = parametersList[i].Distinct().ToList();
+      }
+
+
       var tmpd = parametersList.Select(x => x.Count);
       int combinations = 1;
       foreach (var t in tmpd)
@@ -205,7 +236,7 @@ namespace AutoCodeCoverade
 
       int couuntY = parametersList.Count;
 
-      List<List<object>> combinationList = new List<List<object>>();
+      List <List<object>> combinationList = new List<List<object>>();
       for (int i = 0; i < combinations; i++)
       {
         List<object> list = new List<object>();
@@ -234,7 +265,33 @@ namespace AutoCodeCoverade
         }
       }
 
-      return combinationList;
+      int count = combinations > topParameterCombinations ? topParameterCombinations : combinations;
+      if(autoCoverOptions.AllowRandomizeParametersWithTopCount)
+      {
+        if(count!= combinations)
+        {
+          Random r = new Random(combinations);
+
+          List<int> randomizeItem = new List<int>();
+          List<List<object>> randomizedCombinationList = new List<List<object>>();
+
+          while(randomizedCombinationList.Count< topParameterCombinations)
+          {
+            int rand = r.Next()% combinations;
+            if (randomizeItem.Contains(rand))
+            {
+              continue;
+            }
+            randomizeItem.Add(rand);
+            randomizedCombinationList.Add(combinationList[rand]);
+          }
+
+          return randomizedCombinationList;
+
+        }
+      }
+
+      return combinationList.Take(count).ToList();
     }
 
     private  void GetAndSetValue(object obj, PropertyInfo name)
@@ -293,7 +350,11 @@ namespace AutoCodeCoverade
             }
 
             parameters = parametersList.ToArray();
-
+            if(!autoCoverOptions.AllowNullsAsConstractorParameter)
+            {
+              if (parameters.Where(x => x == null).Any())
+                continue;
+            }
             object inst = null;
 
             try
@@ -320,35 +381,53 @@ namespace AutoCodeCoverade
               parametersList.Add(item);
             }
 
-          
-            
-            List<List<object>> combinationList = CreateParameterCombinations(parametersList);
-
-            foreach (var tpt in combinationList)
+            if (!autoCoverOptions.AllowNullsAsConstractorParameter)
             {
-              parameters = tpt.ToArray();
-
-              object inst = null;
-
-              try
+              foreach(var par in parametersList)
               {
-                inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+                for(int i = par.Count-1; i>=0; i--)
+                {
+                  if(par[i]==null)
+                  {
+                    par.RemoveAt(i);
+                  }
+                }
               }
-              catch (Exception e)
+            }
+            bool skipInvokeConstructor = false;
+            if (parametersList.Where(x => x.Count == 0).Any())
+            {
+               skipInvokeConstructor = true;
+            }
+            if (!skipInvokeConstructor)
+            {
+              List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForCreateInstanes);
+
+              foreach (var tpt in combinationList)
               {
+                parameters = tpt.ToArray();
+
+                object inst = null;
+
                 try
                 {
-                  inst = assembly?.CreateInstance($"{type.FullName}", false, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
+                  inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
                 }
-                catch (Exception e1)
+                catch (Exception e)
                 {
-                  errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType=ErrorTypeEnum.CreateInstance });
+                  try
+                  {
+                    inst = assembly?.CreateInstance($"{type.FullName}", false, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
+                  }
+                  catch (Exception e1)
+                  {
+                    errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType = ErrorTypeEnum.CreateInstance });
+                  }
                 }
+
+                yield return inst;
               }
-
-              yield return inst;
             }
-
           }
         }
       }
@@ -379,7 +458,7 @@ namespace AutoCodeCoverade
           implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
         }
 
-        if (autoCoverOptions.SearchImpelentationInSourceAssembly)
+        if (autoCoverOptions.SearchImplentationInSourceAssembly)
           try
           {
             if (!type.Namespace.StartsWith("System") || autoCoverOptions.AllowSearchInMicrosoftAssembly)
@@ -405,7 +484,7 @@ namespace AutoCodeCoverade
           implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
         }
 
-        if (autoCoverOptions.SearchImpelentationInSourceAssembly)
+        if (autoCoverOptions.SearchImplentationInSourceAssembly)
           try
           {
             if (!type.Namespace.StartsWith("System") || autoCoverOptions.AllowSearchInMicrosoftAssembly)

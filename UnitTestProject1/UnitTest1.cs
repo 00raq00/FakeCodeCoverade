@@ -15,14 +15,19 @@ namespace UnitTestProject1
       AutoCoverOptions autoCoverOptions = new AutoCoverOptions()
       {
         AllowSearchInMicrosoftAssembly = false,
-        CoverFields = false,
+        CoverFields = true,
         CoverProperties = true,
         InvokeMethods = true,
-        MaxDegreeOfParallelismForCreateInstances = 2,
-        MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes = 4,
-        MaxDegreeOfParallelismForMethodsInvokes = 4,
-        SearchImpelentationInSourceAssembly = true,
-        TryCoverBaseExternal = false
+        MaxDegreeOfParallelismForCreateInstances = 10,
+        MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes = 10,
+        MaxDegreeOfParallelismForMethodsInvokes = 10,
+        SearchImplentationInSourceAssembly = true,
+        TryCoverBaseExternal = false,
+        TopParameterCombinationsForCreateInstanes = 10,
+        TopParameterCombinationsForInvokeMethods = 10,
+        AllowNullsAsConstractorParameter = true,
+        AllowNullsAsMethodParameter = true,
+        AllowRandomizeParametersWithTopCount=true
       };
       AutoCodeCoverer unit = new AutoCodeCoverer(autoCoverOptions);
       unit.SetInstanceToInject(typeof(Interface1), new Class5(9));
