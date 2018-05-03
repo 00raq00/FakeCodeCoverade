@@ -150,7 +150,7 @@ namespace AutoCodeCoverage
         foreach (var param in met.GetParameters())
         {
           Type paramType = param.ParameterType;
-          parametersList.Add(GetDefault(paramType, paramType));
+          parametersList.Add(GetDefault(paramType, paramType,false, type).FirstOrDefault());
         }
         parameters = parametersList.ToArray();
 
@@ -178,7 +178,7 @@ namespace AutoCodeCoverage
         foreach (var param in met.GetParameters())
         {
           Type t = param.ParameterType;
-          List<object> item = GetDefaults(t, type, true).ToList();
+          List<object> item = GetDefaults(t, type, true, new[] { type, t }).ToList();
           if (!item.Contains(null)&&!injectionDictionary.ContainsKey(t))
             item.Add(null);
           parametersList.Add(item);
@@ -298,14 +298,14 @@ namespace AutoCodeCoverage
     {
       object value = GetNonPublicIntPropertiesValue(obj, name.Name, obj.GetType());
 
-      value = value ?? GetDefault(name.PropertyType, name.PropertyType);
+      value = value ?? GetDefault(name.PropertyType, name.PropertyType).FirstOrDefault();
 
       SetNonPublicIntPropertiesValue(obj, value, name.Name, obj.GetType());
 
       value = GetNonPublicIntPropertiesValue(obj, name.Name, obj.GetType());
       }
 
-    private  IEnumerable<object> CreateInstaceOfType(Assembly assembly, Type type, Type baseType, bool tryNonEmpty =false)
+    private IEnumerable<object> CreateInstaceOfType(Assembly assembly, Type type, Type baseType, bool tryNonEmpty = false, params Type[] createForType)
     {
       if(UseInstanceInjection)
       {
@@ -334,60 +334,88 @@ namespace AutoCodeCoverage
             Type constructed = type.MakeGenericType(genericType.ToArray());
 
             object[] parameters = null;
-            List<object> parametersList = new List<object>();
+            List<List<object>> parametersList = new List<List<object>>();
             foreach (var param in constract.GetParameters())
             {
               Type t = param.ParameterType;
               if (t.IsGenericParameter)
               {
-                parametersList.Add(GetDefault(t.BaseType, baseType,tryNonEmpty));
+                parametersList.Add(GetDefault(t.BaseType, baseType, tryNonEmpty, createForType).ToList());
               }
               else
               {
 
-                parametersList.Add(GetDefault(t, baseType, tryNonEmpty));
+                List<object> item1 = GetDefault(t, baseType, tryNonEmpty, createForType).ToList();
+                //var list = GetDefault(t, item1);
+
+                parametersList.Add(item1);
               }
             }
 
-            parameters = parametersList.ToArray();
-            if(!autoCoverOptions.AllowNullsAsConstractorParameter)
-            {
-              if (parameters.Where(x => x == null).Any())
-                continue;
-            }
-            object inst = null;
+            List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForCreateInstances);
 
-            try
+            foreach (var tpt in combinationList)
             {
-              inst = Activator.CreateInstance(constructed, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
-            }
-            catch (Exception e1)
-            {
-              errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType=ErrorTypeEnum.CreateInstance });
-            }
+              parameters = tpt.ToArray();
 
-            yield return inst;
+
+              if (!autoCoverOptions.AllowNullsAsConstractorParameter)
+              {
+                if (parameters.Where(x => x == null).Any())
+                  continue;
+              }
+              object inst = null;
+
+              try
+              {
+                inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
+              }
+              catch (Exception e)
+              {
+                try
+                {
+                  inst = Activator.CreateInstance(constructed, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
+                }
+                catch (Exception e1)
+                {
+                  errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType = ErrorTypeEnum.CreateInstance });
+                }
+              }
+
+              yield return inst;
+            }
           }
           else
           {
             object[] parameters = null;
-            List< List<object>> parametersList = new List<List<object>>();
+            List<List<object>> parametersList = new List<List<object>>();
             foreach (var param in constract.GetParameters())
             {
+              var types = createForType;
+
               Type t = param.ParameterType;
-              List<object> item = tryNonEmpty?GetDefaults(t,baseType, tryNonEmpty).ToList(): new List<object>() { GetDefault(t, baseType, tryNonEmpty) };
-              if(!item.Contains(null) && !injectionDictionary.ContainsKey(t))
+              var listLtype = new List<Type>();
+              if (types != null)
+              {
+                listLtype.AddRange(types);
+              }
+              listLtype.Add(baseType);
+              listLtype.Add(type);
+              listLtype.Add(t);
+
+              List<object> item = tryNonEmpty ? GetDefaults(t, baseType, tryNonEmpty, listLtype.Distinct().ToArray()).ToList() : new List<object>() { GetDefault(t, baseType, tryNonEmpty, createForType).FirstOrDefault() };
+              if (!item.Contains(null) && !injectionDictionary.ContainsKey(t))
                 item.Add(null);
               parametersList.Add(item);
             }
 
             if (!autoCoverOptions.AllowNullsAsConstractorParameter)
             {
-              foreach(var par in parametersList)
+              foreach (var par in parametersList)
               {
-                for(int i = par.Count-1; i>=0; i--)
+                for (int i = par.Count - 1; i >= 0; i--)
                 {
-                  if(par[i]==null)
+                  if (par[i] == null)
                   {
                     par.RemoveAt(i);
                   }
@@ -397,11 +425,11 @@ namespace AutoCodeCoverage
             bool skipInvokeConstructor = false;
             if (parametersList.Where(x => x.Count == 0).Any())
             {
-               skipInvokeConstructor = true;
+              skipInvokeConstructor = true;
             }
             if (!skipInvokeConstructor)
             {
-              List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForCreateInstanes);
+              List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForCreateInstances);
 
               foreach (var tpt in combinationList)
               {
@@ -433,7 +461,22 @@ namespace AutoCodeCoverage
       }
     }
 
-    private IEnumerable<object> GetDefaults(Type type, Type baseType, bool tryNonEmpty = false)
+    private object GetDefault(Type t, IEnumerable<object> obj)
+    {
+      return GetType().GetMethod("GetDefaultList").MakeGenericMethod(t).Invoke(this, new[] { obj });
+    }
+
+    public List<T> GetDefaultList<T>(IEnumerable<object> obj)
+    {
+      List<T> list = new List<T>();
+      foreach(var ob in obj)
+      {
+        list.Add((T)ob);
+      }
+      return list;
+    }
+
+    private IEnumerable<object> GetDefaults(Type type, Type baseType, bool tryNonEmpty = false, params Type[] createForType)
     {
       if (UseInstanceInjection)
       {
@@ -477,11 +520,11 @@ namespace AutoCodeCoverage
       if (type.IsClass)
       {
 
-        implementations = GetInheritingClassesFromAllAssemblies(type, implementations, baseType);
+        implementations = GetInheritingClassesFromAllAssemblies(type, implementations, baseType, createForType);
 
         for (int i = 0; i < implementations.Count(); i++)
         {
-          implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations);
+          implementations = GetInheritingClassesFromAllAssemblies(implementations.ElementAt(i), implementations, baseType,createForType);
         }
 
         if (autoCoverOptions.SearchImplentationInSourceAssembly)
@@ -490,7 +533,7 @@ namespace AutoCodeCoverage
             if (!type.Namespace.StartsWith("System") || autoCoverOptions.AllowSearchInMicrosoftAssembly)
             {
               var baseAssembly = Assembly.GetAssembly(type);
-              var inhiritClasses = FindInheritingClasses(type, baseType, baseAssembly);
+              var inhiritClasses = FindInheritingClasses(type, baseType, baseAssembly, createForType);
               implementations = implementations.Union(inhiritClasses);
             }
           }
@@ -502,17 +545,46 @@ namespace AutoCodeCoverage
 
       foreach (var typ in implementations)
         {
-          yield return GetDefault(typ, baseType, tryNonEmpty);
+        List<object> list = GetDefault(typ, baseType, tryNonEmpty, createForType).ToList();
+        foreach(var obj in list)
+        {
+                    yield return obj;
+        }
         }
      
       if(!type.IsInterface && !type.IsAbstract )
-        yield return GetDefault(type, baseType, tryNonEmpty);
-      
+      {
+        List<object> list1 = GetDefault(type, baseType, tryNonEmpty, createForType).ToList();
+        foreach (var obj in list1)
+        {
+          yield return obj;
+        }
+      }
+    
     }
 
-    private static IEnumerable<Type> FindInheritingClasses(Type type, Type baseType, Assembly assembly)
+    private static IEnumerable<Type> FindInheritingClasses(Type type, Type baseType, Assembly assembly, params Type[] createForType)
     {
-      return assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+      List<Type> list = new List<Type>();
+      IEnumerable<Type> enumerable = assembly.GetTypes().Where(x => Type.Equals(x.BaseType, type) && !Type.Equals(x, baseType));
+      foreach (var t in enumerable)
+      {
+        bool exist = false;
+        foreach(var cft in createForType)
+        {
+          if (Type.Equals(t, cft))
+          {
+            exist = true;
+            break;
+          }
+        }
+        if (!exist)
+        {
+          list.Add(t);
+        }
+      }
+
+      return list;
     }
 
     private static IEnumerable<Type> FindInterfaceImplementations(Type type, Assembly interfaceAssembly)
@@ -520,11 +592,11 @@ namespace AutoCodeCoverage
       return interfaceAssembly.GetTypes().Where(x => x.GetInterfaces().Where(y => y.Equals(type)).Select(y => y).Any()).Select(y => y);
     }
 
-    private IEnumerable<Type> GetInheritingClassesFromAllAssemblies(Type type, IEnumerable<Type> implementations, Type baseType=null)
+    private IEnumerable<Type> GetInheritingClassesFromAllAssemblies(Type type, IEnumerable<Type> implementations, Type baseType = null, params Type[] createForType)
     {
       foreach (var assembly in assemblies)
       {
-        IEnumerable<Type> nextAssemlbyImplementations = FindInheritingClasses(type, baseType, assembly);
+        IEnumerable<Type> nextAssemlbyImplementations = FindInheritingClasses(type, baseType, assembly, createForType);
 
           implementations = implementations.Union(nextAssemlbyImplementations);
       }
@@ -532,44 +604,58 @@ namespace AutoCodeCoverage
       return implementations;
     }
 
-    private object GetDefault(Type type, Type baseType, bool tryNonEmpty =false)
+    private IEnumerable<object> GetDefault(Type type, Type baseType, bool tryNonEmpty = false, params Type[] createForType)
     {
       if (UseInstanceInjection)
       {
         if (injectionDictionary.Keys.Contains(type))
         {
-           return injectionDictionary[type];
-          
+          yield return injectionDictionary[type];
+          yield break;
+
         }
       }
-      try
+
+      if (tryNonEmpty)
       {
-        if (tryNonEmpty)
+        if (type.Equals(typeof(int)))
         {
-          if (type.Equals(typeof(int)))
-          {
-            Random random = new Random();
-            return random.Next();
-          }
-          if (type.Equals(typeof(double)))
-          {
-            Random random = new Random();
-            return random.NextDouble();
-          }
-          if (type.Equals(typeof(float)))
-          {
-            Random random = new Random();
-            return (float.Parse(random.NextDouble().ToString()));
-          }
-          if (type.Equals(typeof(decimal)))
-          {
-            Random random = new Random();
-            return decimal.Parse(random.NextDouble().ToString());
-          }
-          if (type.Equals(typeof(string)))
-          {
-            return type.Name;
-          }
+          Random random = new Random();
+          yield return (int)random.Next();
+
+          yield break;
+        }
+        if (type.Equals(typeof(double)))
+        {
+          Random random = new Random();
+          yield return random.NextDouble();
+
+          yield break;
+        }
+        if (type.Equals(typeof(float)))
+        {
+          Random random = new Random();
+          yield return (float.Parse(random.NextDouble().ToString()));
+
+          yield break;
+        }
+        if (type.Equals(typeof(decimal)))
+        {
+          Random random = new Random();
+          yield return decimal.Parse(random.NextDouble().ToString());
+
+          yield break;
+        }
+        if (type.Equals(typeof(string)))
+        {
+          yield return (string)type.Name;
+
+          yield break;
+        }
+
+        List<object> obj = new List<object>();
+        try
+        {
           if (type.IsInterface)
           {
             IEnumerable<Type> tmp = null;
@@ -588,14 +674,36 @@ namespace AutoCodeCoverage
             type = tmp.FirstOrDefault();
           }
 
+          if (type.IsValueType)
+          {
+            obj.Add(Activator.CreateInstance(type));
+          }
+          else
+          {
+            if (autoCoverOptions.TopCountOfSameObjectInstances == 1)
+            {
+              obj.Add(CreateInstaceOfType(null, type, baseType, tryNonEmpty, createForType).FirstOrDefault());
+            }
+            else
+            {
+              obj.AddRange(CreateInstaceOfType(null, type, baseType, tryNonEmpty, createForType).Take(autoCoverOptions.TopCountOfSameObjectInstances));
+            }
+          }
+
         }
-        return type.IsValueType ? Activator.CreateInstance(type) : CreateInstaceOfType(null, type, baseType).FirstOrDefault();
+        catch (Exception e)
+        {
+          errorList.Add(new Error() { Exception = e, Parameters = new object[] { type }, ErrorType = ErrorTypeEnum.CreateDefaultValue });
+        }
+        foreach (var ob in obj)
+        {
+          yield return ob;
+        }
       }
-      catch(Exception e)
+      else
       {
-        errorList.Add(new Error() { Exception = e, Parameters = new object[] { type }, ErrorType = ErrorTypeEnum.CreateDefaultValue });
+        yield return null;
       }
-      return null;
     }
 
 
@@ -666,7 +774,7 @@ namespace AutoCodeCoverage
     {
       object value = GetNonPublicIntFiledValue(obj, name.Name, obj.GetType());
 
-      value = value ?? GetDefault(name.FieldType, name.FieldType);
+      value = value ?? GetDefault(name.FieldType, name.FieldType).FirstOrDefault();
 
       SetNonPublicIntFiledValue(obj, value, name.Name, obj.GetType());
 

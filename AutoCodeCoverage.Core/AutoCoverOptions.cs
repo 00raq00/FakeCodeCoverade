@@ -16,11 +16,12 @@ namespace AutoCodeCoverage
     private int _maxDegreeOfParallelismForCreateInstances = 1;
     private int _maxDegreeOfParallelismForCombinationOfParametersMethodInvokes = 1;
     private int _maxDegreeOfParallelismForMethodsInvokes = 1;
-    private int _topParameterCombinationsForCreateInstanes = 10;
+    private int _topParameterCombinationsForCreateInstances = 10;
     private int _topParameterCombinationsForInvokeMethods = 10;
     private bool _allowNullsAsMethodParameter = false;
     private bool _allowNullsAsConstractorParameter = false;
     private bool _allowRandomizeParametersWithTopCount;
+    private int _topCountOfSameObjectInstances = 1;
 
     public bool SearchImplentationInSourceAssembly { get => _searchImpelentationInSourceAssembly; set => _searchImpelentationInSourceAssembly = value; }
     public bool TryCoverBaseExternal { get => _tryCoverBaseExternal; set => _tryCoverBaseExternal = value; }
@@ -34,7 +35,8 @@ namespace AutoCodeCoverage
     public int MaxDegreeOfParallelismForCombinationOfParametersMethodInvokes { get => _maxDegreeOfParallelismForCombinationOfParametersMethodInvokes; set => _maxDegreeOfParallelismForCombinationOfParametersMethodInvokes = value; }
     public int MaxDegreeOfParallelismForMethodsInvokes { get => _maxDegreeOfParallelismForMethodsInvokes; set => _maxDegreeOfParallelismForMethodsInvokes = value; }
     public int TopParameterCombinationsForInvokeMethods { get => _topParameterCombinationsForInvokeMethods; set => _topParameterCombinationsForInvokeMethods = value; }
-    public int TopParameterCombinationsForCreateInstanes { get => _topParameterCombinationsForCreateInstanes; set => _topParameterCombinationsForCreateInstanes = value; }
+    public int TopParameterCombinationsForCreateInstances { get => _topParameterCombinationsForCreateInstances; set => _topParameterCombinationsForCreateInstances = value; }
+    public int TopCountOfSameObjectInstances { get => _topCountOfSameObjectInstances; set => _topCountOfSameObjectInstances = value; }
     //causes nondeterministic coverage
     public bool AllowRandomizeParametersWithTopCount { get => _allowRandomizeParametersWithTopCount; set => _allowRandomizeParametersWithTopCount = value; }
   }
