@@ -65,14 +65,16 @@ namespace AutoCodeCoverage
           foreach (var type in assembly.GetTypes().Where(x => !x.IsAbstract&& !x.IsInterface) )
           {
             string full = type.FullName;
-            var enumerable = CreateInstaceOfType(assembly, type, type).ToList();
+            List<object> enumerable = null;
             ParallelOptions parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = autoCoverOptions.MaxDegreeOfParallelismForCreateInstances };
 
-            Parallel.ForEach(enumerable, parallelOptions, inst =>
-            {
-              ProcessInstance(inst, type);
-            });
+              enumerable = CreateInstaceOfType(assembly, type, type).ToList();
 
+              Parallel.ForEach(enumerable, parallelOptions, inst =>
+              {
+                ProcessInstance(inst, type);
+              });
+              
             enumerable = CreateInstaceOfType(assembly, type, type, true).ToList();
             Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
@@ -344,15 +346,18 @@ namespace AutoCodeCoverage
               }
               else
               {
-
                 List<object> item1 = GetDefault(t, baseType, tryNonEmpty, createForType).ToList();
-                //var list = GetDefault(t, item1);
-
                 parametersList.Add(item1);
               }
             }
-
-            List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForCreateInstances);
+            bool skipInvokeConstructor = false;
+            if (parametersList.Where(x => x.Count == 0).Any())
+            {
+              skipInvokeConstructor = true;
+            }
+            if (!skipInvokeConstructor)
+            {
+              List<List<object>> combinationList = CreateParameterCombinations(parametersList, autoCoverOptions.TopParameterCombinationsForCreateInstances);
 
             foreach (var tpt in combinationList)
             {
@@ -365,24 +370,25 @@ namespace AutoCodeCoverage
                   continue;
               }
               object inst = null;
-
-              try
-              {
-                inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
-              }
-              catch (Exception e)
-              {
+            
                 try
                 {
-                  inst = Activator.CreateInstance(constructed, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
+                  inst = constract.Invoke(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null);
                 }
-                catch (Exception e1)
+                catch (Exception e)
                 {
-                  errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType = ErrorTypeEnum.CreateInstance });
+                  try
+                  {
+                    inst = Activator.CreateInstance(constructed, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.CreateInstance, null, parameters, null, null);
+                  }
+                  catch (Exception e1)
+                  {
+                    errorList.Add(new Error() { Exception = e1, Type = type, Parameters = parameters, ErrorType = ErrorTypeEnum.CreateInstance });
+                  }
                 }
-              }
 
-              yield return inst;
+                yield return inst;
+              }
             }
           }
           else

@@ -24,12 +24,12 @@ namespace UnitTestProject1
         MaxDegreeOfParallelismForMethodsInvokes = 1,
         SearchImplentationInSourceAssembly = true,
         TryCoverBaseExternal = false,
-        TopParameterCombinationsForCreateInstances = 10,
-        TopParameterCombinationsForInvokeMethods = 10,
+        TopParameterCombinationsForCreateInstances = 4,
+        TopParameterCombinationsForInvokeMethods = 4,
         AllowNullsAsConstractorParameter = true,
         AllowNullsAsMethodParameter = true,
         AllowRandomizeParametersWithTopCount=true,
-        TopCountOfSameObjectInstances=2
+        TopCountOfSameObjectInstances=1
       };
       AutoCodeCoverer unit = new AutoCodeCoverer(autoCoverOptions);
       //unit.SetInstanceToInject(typeof(Interface1), new Class5(9));
