@@ -433,7 +433,7 @@ namespace AutoCodeCoverage
       }
     }
 
-    public IEnumerable<object> GetDefaults(Type type, Type baseType, bool tryNonEmpty = false)
+    private IEnumerable<object> GetDefaults(Type type, Type baseType, bool tryNonEmpty = false)
     {
       if (UseInstanceInjection)
       {
@@ -532,7 +532,7 @@ namespace AutoCodeCoverage
       return implementations;
     }
 
-    public  object GetDefault(Type type, Type baseType, bool tryNonEmpty =false)
+    private object GetDefault(Type type, Type baseType, bool tryNonEmpty =false)
     {
       if (UseInstanceInjection)
       {
@@ -601,7 +601,7 @@ namespace AutoCodeCoverage
 
 
 
-    public  void SetNonPublicIntFiledValue(object obj, object val, string fieldName, Type type)
+    private void SetNonPublicIntFiledValue(object obj, object val, string fieldName, Type type)
     {
       try
       {
@@ -616,7 +616,7 @@ namespace AutoCodeCoverage
     }
 
 
-    public void SetNonPublicIntPropertiesValue(object obj, object val, string propertyName, Type type)
+    private void SetNonPublicIntPropertiesValue(object obj, object val, string propertyName, Type type)
     {
       try
       {
@@ -632,7 +632,7 @@ namespace AutoCodeCoverage
       }
     }
 
-    public  object GetNonPublicIntFiledValue(object obj, string fieldName, Type type)
+    private object GetNonPublicIntFiledValue(object obj, string fieldName, Type type)
     {
       try{ 
       FieldInfo field = type.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.CreateInstance);
@@ -647,7 +647,7 @@ namespace AutoCodeCoverage
     }
 
 
-    public object GetNonPublicIntPropertiesValue(object obj, string fieldName, Type type)
+    private object GetNonPublicIntPropertiesValue(object obj, string fieldName, Type type)
     {
       try
       {
@@ -662,7 +662,7 @@ namespace AutoCodeCoverage
       return null;
     }
 
-    public  object GetAndSetValue(object obj, FieldInfo name)
+    private object GetAndSetValue(object obj, FieldInfo name)
     {
       object value = GetNonPublicIntFiledValue(obj, name.Name, obj.GetType());
 

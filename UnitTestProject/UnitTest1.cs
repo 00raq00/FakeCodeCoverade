@@ -35,7 +35,6 @@ namespace UnitTestProject1
       unit.SetInstanceToInject(typeof(object), new Class7(null,null));
       unit.RunCovererOnAssembly("ClassLibrary1", "multiImplementation", "ProjectToCover");
       var errors = unit.GetErrors();
-
       Assert.AreEqual(errors.Count(), 0);
     }
   }
