@@ -1,1 +1,0 @@
-nuget pack AutoCodeCoverade.csproj -properties Configuration=Release

@@ -1,0 +1,1 @@
+nuget pack AutoCodeCoverage.csproj -properties Configuration=Release

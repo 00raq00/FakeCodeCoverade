@@ -1,5 +1,5 @@
 ﻿
-using AutoCodeCoverade;
+using AutoCodeCoverage;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AutoCodeCoverade
+namespace AutoCodeCoverage
 {
   public  class AutoCodeCoverer
   {

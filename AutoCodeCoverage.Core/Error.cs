@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AutoCodeCoverade
+namespace AutoCodeCoverage
 {
   public class Error
   {

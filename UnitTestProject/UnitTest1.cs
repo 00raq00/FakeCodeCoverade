@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
-using AutoCodeCoverade;
+using AutoCodeCoverage;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using multiImplementation;
 
