@@ -78,14 +78,14 @@ namespace AutoCodeCoverage
             enumerable = CreateInstaceOfType(assembly, type, type, true).ToList();
             Parallel.ForEach(enumerable, parallelOptions, inst =>
             {
-              ProcessInstance(inst, type);
+              ProcessInstance(inst, type, true);
             });
           }
         }
       }
     }
 
-    private void ProcessInstance(object inst, Type type)
+    private void ProcessInstance(object inst, Type type, bool tryNonEmpty=false)
     {
       if (inst != null)
       {
@@ -102,7 +102,7 @@ namespace AutoCodeCoverage
 
           Parallel.ForEach(methods, parallelOptions, met =>
           {
-            RunMethods(type, inst, met);
+            RunMethods(type, inst, met, tryNonEmpty);
           });
         }
 
@@ -117,7 +117,7 @@ namespace AutoCodeCoverage
 
           foreach (var field in fields)
           {
-            GetAndSetValue(inst, field);
+            GetAndSetValue(inst, field, tryNonEmpty);
           }
         }
 
@@ -131,7 +131,7 @@ namespace AutoCodeCoverage
           }
           foreach (var property in properties)
           {
-            GetAndSetValue(inst, property);
+            GetAndSetValue(inst, property, tryNonEmpty);
           }
         }
       }
@@ -143,9 +143,9 @@ namespace AutoCodeCoverage
       return list;
     }
 
-    private void RunMethods(Type type, object inst, MethodInfo met)
+    private void RunMethods(Type type, object inst, MethodInfo met, bool tryNonEmpty)
     {
-      {
+      if(!tryNonEmpty){
         bool skipDefualtInvoke = false;
         object[] parameters = null;
         List<object> parametersList = new List<object>();
@@ -174,6 +174,7 @@ namespace AutoCodeCoverage
           }
         }
       }
+      else
       {
         object[] parameters = null;
         List<List<object>> parametersList = new List<List<object>>();
@@ -296,11 +297,11 @@ namespace AutoCodeCoverage
       return combinationList.Take(count).ToList();
     }
 
-    private  void GetAndSetValue(object obj, PropertyInfo name)
+    private  void GetAndSetValue(object obj, PropertyInfo name, bool tryNonEmpty)
     {
       object value = GetNonPublicIntPropertiesValue(obj, name.Name, obj.GetType());
 
-      value = value ?? GetDefault(name.PropertyType, name.PropertyType).FirstOrDefault();
+      value = value ?? GetDefault(name.PropertyType, name.PropertyType,tryNonEmpty).FirstOrDefault();
 
       SetNonPublicIntPropertiesValue(obj, value, name.Name, obj.GetType());
 
@@ -551,7 +552,7 @@ namespace AutoCodeCoverage
 
       foreach (var typ in implementations)
         {
-        List<object> list = GetDefault(typ, baseType, tryNonEmpty, createForType).ToList();
+        var list = GetDefault(typ, baseType, tryNonEmpty, createForType);
         foreach(var obj in list)
         {
                     yield return obj;
@@ -560,7 +561,7 @@ namespace AutoCodeCoverage
      
       if(!type.IsInterface && !type.IsAbstract )
       {
-        List<object> list1 = GetDefault(type, baseType, tryNonEmpty, createForType).ToList();
+       var list1 = GetDefault(type, baseType, tryNonEmpty, createForType);
         foreach (var obj in list1)
         {
           yield return obj;
@@ -776,11 +777,11 @@ namespace AutoCodeCoverage
       return null;
     }
 
-    private object GetAndSetValue(object obj, FieldInfo name)
+    private object GetAndSetValue(object obj, FieldInfo name, bool tryNonEmpty)
     {
       object value = GetNonPublicIntFiledValue(obj, name.Name, obj.GetType());
 
-      value = value ?? GetDefault(name.FieldType, name.FieldType).FirstOrDefault();
+      value = value ?? GetDefault(name.FieldType, name.FieldType, tryNonEmpty).FirstOrDefault();
 
       SetNonPublicIntFiledValue(obj, value, name.Name, obj.GetType());
 
